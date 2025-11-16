@@ -2,95 +2,99 @@
 #include "constants.h"
 #include "utils.h"
 #include "arithmetic.h"
-#include <algorithm> // Для std::reverse, std::max, std::swap
-#include <stdexcept> // Для исключений
+#include <algorithm>
+#include <stdexcept>
 #include <iostream>
 
 // Реализация методов класса BigFiniteNumber
 std::string BigFiniteNumber::normalize(std::string num_str) const {
-    size_t first_digit = num_str.find_first_not_of(ADDITIVE_UNIT);
+    size_t first_digit = num_str.find_first_not_of(get_additive_unit());
     if (std::string::npos == first_digit) {
-        return std::string(1, ADDITIVE_UNIT);
+        return std::string(1, get_additive_unit());
     }
     return num_str.substr(first_digit);
 }
 
 std::string BigFiniteNumber::pad_left(std::string num_str, int target_len) const {
     if (num_str.length() >= target_len) return num_str;
-    return std::string(target_len - num_str.length(), ADDITIVE_UNIT) + num_str;
+    return std::string(target_len - num_str.length(), get_additive_unit()) + num_str;
 }
 
 void BigFiniteNumber::truncate() {
     if (value.length() > MAX_DIGITS) {
-        // === ДОБАВЛЕНО ПРЕДУПРЕЖДЕНИЕ О ПЕРЕПОЛНЕНИИ ===
         std::cerr << "WARNING: OVERFLOW detected! Result ("
                   << (is_negative ? "-" : "") << value
                   << ") exceeds " << MAX_DIGITS << " digits. Truncating." << std::endl;
-        // === КОНЕЦ ДОБАВЛЕНИЯ ===
 
-        if (!is_negative) { // Положительное число: отбрасываем старшие разряды
-            value = value.substr(value.length() - MAX_DIGITS);
-        }
-        else { // Отрицательное число: берем последние MAX_DIGITS символов
-            value = value.substr(value.length() - MAX_DIGITS);
-        }
+        value = value.substr(value.length() - MAX_DIGITS);
         value = normalize(value);
-        if (value == std::string(1, ADDITIVE_UNIT)) is_negative = false; // 'a' не может быть отрицательным
+        if (value == std::string(1, get_additive_unit())) is_negative = false;
     }
 }
 
 BigFiniteNumber::BigFiniteNumber(std::string val, bool neg) : value(normalize(val)), is_negative(neg) {
-    if (this->value == std::string(1, ADDITIVE_UNIT)) is_negative = false;
-    truncate(); // Обрезаем до 8 разрядов
+    if (this->value == std::string(1, get_additive_unit())) is_negative = false;
+    truncate();
 }
 
 int BigFiniteNumber::compare_abs(const BigFiniteNumber& other) const {
     std::string s1 = normalize(this->value);
     std::string s2 = normalize(other.value);
+    
     if (s1.length() > s2.length()) return 1;
     if (s1.length() < s2.length()) return -1;
+    
     for (size_t i = 0; i < s1.length(); ++i) {
-        int w1 = get_symbol_weight(s1[i]);
-        int w2 = get_symbol_weight(s2[i]);
-        if (w1 > w2) return 1;
-        if (w1 < w2) return -1;
+        int cmp = compare_chars(s1[i], s2[i]);
+        if (cmp != 0) return cmp;
     }
+    
     return 0;
 }
 
-BigFiniteNumber::BigFiniteNumber() : value(std::string(1, ADDITIVE_UNIT)), is_negative(false) {}
+BigFiniteNumber::BigFiniteNumber() : value(std::string(1, get_additive_unit())), is_negative(false) {}
 
 BigFiniteNumber::BigFiniteNumber(const std::string& num_str) {
     if (num_str.empty()) {
-        value = std::string(1, ADDITIVE_UNIT); is_negative = false; return;
+        value = std::string(1, get_additive_unit()); 
+        is_negative = false; 
+        return;
     }
+    
     std::string temp_str = num_str;
     is_negative = false;
+    
     if (temp_str[0] == '-') {
         is_negative = true;
         temp_str = temp_str.substr(1);
         if (temp_str.empty()) {
-             value = std::string(1, ADDITIVE_UNIT); is_negative = false; return;
+            value = std::string(1, get_additive_unit()); 
+            is_negative = false; 
+            return;
         }
     }
+    
     for (char c : temp_str) {
         if (!is_valid_digit(c)) {
             std::cerr << "ERROR: Invalid character '" << c << "' in input '" << num_str
-                      << "'. Defaulting to 'a'." << std::endl;
-            value = std::string(1, ADDITIVE_UNIT); is_negative = false; return;
+                      << "'. Defaulting to '" << get_additive_unit() << "'." << std::endl;
+            value = std::string(1, get_additive_unit()); 
+            is_negative = false; 
+            return;
         }
     }
+    
     value = normalize(temp_str);
-    if (value == std::string(1, ADDITIVE_UNIT)) is_negative = false;
-    truncate(); // Обрезаем до 8 разрядов
+    if (value == std::string(1, get_additive_unit())) is_negative = false;
+    truncate();
 }
 
 BigFiniteNumber BigFiniteNumber::from_internal_string(const std::string& val, bool neg) {
-    return BigFiniteNumber(val, neg); // Вызов приватного конструктора
+    return BigFiniteNumber(val, neg);
 }
 
 std::ostream& operator<<(std::ostream& os, const BigFiniteNumber& num) {
-    if (num.is_negative && num.value != std::string(1, ADDITIVE_UNIT)) {
+    if (num.is_negative && num.value != std::string(1, get_additive_unit())) {
         os << "-";
     }
     os << num.value;
@@ -100,214 +104,230 @@ std::ostream& operator<<(std::ostream& os, const BigFiniteNumber& num) {
 bool BigFiniteNumber::operator==(const BigFiniteNumber& other) const {
     return (this->is_negative == other.is_negative) && (this->value == other.value);
 }
-bool BigFiniteNumber::operator!=(const BigFiniteNumber& other) const { return !(*this == other); }
+
+bool BigFiniteNumber::operator!=(const BigFiniteNumber& other) const { 
+    return !(*this == other); 
+}
 
 bool BigFiniteNumber::operator<(const BigFiniteNumber& other) const {
     if (this->is_negative && !other.is_negative) return true;
     if (!this->is_negative && other.is_negative) return false;
+    
     int cmp_abs = compare_abs(other);
     if (!this->is_negative) return cmp_abs == -1;
     else return cmp_abs == 1;
 }
-bool BigFiniteNumber::operator>(const BigFiniteNumber& other) const { return other < *this; }
-bool BigFiniteNumber::operator<=(const BigFiniteNumber& other) const { return !(*this > other); }
-bool BigFiniteNumber::operator>=(const BigFiniteNumber& other) const { return !(*this < other); }
+
+bool BigFiniteNumber::operator>(const BigFiniteNumber& other) const { 
+    return other < *this; 
+}
+
+bool BigFiniteNumber::operator<=(const BigFiniteNumber& other) const { 
+    return !(*this > other); 
+}
+
+bool BigFiniteNumber::operator>=(const BigFiniteNumber& other) const { 
+    return !(*this < other); 
+}
 
 BigFiniteNumber BigFiniteNumber::operator+(const BigFiniteNumber& other) const {
-    std::string s1 = this->value;
-    std::string s2 = other.value;
-    bool res_is_negative = this->is_negative;
-
-    if (this->is_negative == other.is_negative) { // Знаки одинаковые
-        int max_len = std::max(s1.length(), s2.length());
-        s1 = pad_left(s1, max_len);
-        s2 = pad_left(s2, max_len);
-
-        std::string res_str = "";
-        char carry = ADDITIVE_UNIT; // 'a'
-
+    if (this->is_negative == other.is_negative) {
+        // Сложение чисел с одинаковыми знаками
+        int max_len = std::max(this->value.length(), other.value.length());
+        std::string s1 = pad_left(this->value, max_len);
+        std::string s2 = pad_left(other.value, max_len);
+        
+        std::string result;
+        char carry = get_additive_unit();
+        
         for (int i = max_len - 1; i >= 0; --i) {
-            char sum_digits = symbolic_add(s1[i], s2[i]);
-            char final_sum_char = symbolic_add(sum_digits, carry);
-            int idx1 = get_symbol_weight(s1[i]);
-            int idx2 = get_symbol_weight(s2[i]);
-            int idx_carry = get_symbol_weight(carry);
-            int total_index_sum = idx1 + idx2 + idx_carry;
-            carry = SYMBOLS[total_index_sum / MOD];
-            res_str += final_sum_char;
+            auto [sum, new_carry] = ADDITION_TABLE[std::make_tuple(s1[i], s2[i], carry)];
+            result = std::string(1, sum) + result;
+            carry = new_carry;
         }
-        if (carry != ADDITIVE_UNIT) {
-            res_str += carry;
+        
+        // Если остался перенос, добавляем его
+        if (carry != get_additive_unit()) {
+            result = std::string(1, carry) + result;
         }
-        std::reverse(res_str.begin(), res_str.end());
-        return BigFiniteNumber::from_internal_string(res_str, res_is_negative);
-    }
-    else { // Знаки разные
-        if (compare_abs(other) >= 0) {
-            BigFiniteNumber temp_other = other;
-            temp_other.is_negative = !temp_other.is_negative;
-            return *this - temp_other;
-        }
-        else {
-            BigFiniteNumber temp_this = *this;
-            temp_this.is_negative = !temp_this.is_negative;
-            return other - temp_this;
+        
+        return BigFiniteNumber::from_internal_string(normalize(result), this->is_negative);
+    } else {
+        // Разные знаки - сводим к вычитанию
+        if (this->is_negative) {
+            BigFiniteNumber positive_this = BigFiniteNumber::from_internal_string(this->value, false);
+            return other - positive_this;
+        } else {
+            BigFiniteNumber positive_other = BigFiniteNumber::from_internal_string(other.value, false);
+            return *this - positive_other;
         }
     }
 }
 
 BigFiniteNumber BigFiniteNumber::operator-(const BigFiniteNumber& other) const {
-    if (this->is_negative != other.is_negative) { // Знаки разные
-        BigFiniteNumber temp_other = other;
-        temp_other.is_negative = !temp_other.is_negative;
-        return *this + temp_other;
-    }
-    else { // Знаки одинаковые
-        std::string s1_abs = this->value;
-        std::string s2_abs = other.value;
-        bool res_is_negative = false;
-
-        int cmp_abs = compare_abs(other);
-        if (cmp_abs == 0) return BigFiniteNumber::from_internal_string(std::string(1, ADDITIVE_UNIT), false);
-
-        if (cmp_abs < 0) {
-            std::swap(s1_abs, s2_abs);
-            res_is_negative = !this->is_negative;
-        } else {
-            res_is_negative = this->is_negative;
+    if (this->is_negative != other.is_negative) {
+        // Разные знаки - сводим к сложению
+        BigFiniteNumber positive_other = BigFiniteNumber::from_internal_string(other.value, !other.is_negative);
+        return *this + positive_other;
+    } else {
+        // Одинаковые знаки
+        int cmp = compare_abs(other);
+        if (cmp == 0) {
+            return BigFiniteNumber::from_internal_string(std::string(1, get_additive_unit()), false);
         }
-
-        int max_len = std::max(s1_abs.length(), s2_abs.length());
-        s1_abs = pad_left(s1_abs, max_len);
-        s2_abs = pad_left(s2_abs, max_len);
-
-        std::string res_str = "";
-        char borrow = ADDITIVE_UNIT; // 'a'
-
+        
+        bool result_negative = this->is_negative;
+        if (cmp < 0) {
+            // Если |this| < |other|, результат меняет знак
+            result_negative = !result_negative;
+        }
+        
+        std::string larger = (cmp >= 0) ? this->value : other.value;
+        std::string smaller = (cmp >= 0) ? other.value : this->value;
+        
+        // Выравниваем по длине
+        int max_len = std::max(larger.length(), smaller.length());
+        larger = pad_left(larger, max_len);
+        smaller = pad_left(smaller, max_len);
+        
+        std::string result;
+        char borrow = get_additive_unit();
+        
         for (int i = max_len - 1; i >= 0; --i) {
-            int idx1 = get_symbol_weight(s1_abs[i]);
-            int idx2 = get_symbol_weight(s2_abs[i]);
-            int idx_borrow = get_symbol_weight(borrow);
-
-            idx1 -= idx_borrow;
-            if (idx1 < idx2) {
-                borrow = SYMBOLS[1]; // 'b' (1)
-                idx1 += MOD;
-            } else {
-                borrow = ADDITIVE_UNIT; // 'a' (0)
+            char current = larger[i];
+            
+            // Вычитаем borrow
+            if (borrow != get_additive_unit()) {
+                current = symbolic_add(current, symbolic_negate(borrow));
+                borrow = get_additive_unit();
             }
-            res_str += SYMBOLS[idx1 - idx2];
+            
+            // Если текущая цифра меньше вычитаемой, берем заем
+            if (compare_chars(current, smaller[i]) < 0) {
+                borrow = get_multiplicative_unit();
+                // Добавляем MOD к текущей цифре
+                char mod_value = get_additive_unit();
+                for (int j = 0; j < MOD; j++) {
+                    mod_value = next_symbol(mod_value);
+                }
+                current = symbolic_add(current, mod_value);
+            }
+            
+            char result_digit = symbolic_add(current, symbolic_negate(smaller[i]));
+            result = std::string(1, result_digit) + result;
         }
-        std::reverse(res_str.begin(), res_str.end());
-        return BigFiniteNumber::from_internal_string(res_str, res_is_negative);
+        
+        return BigFiniteNumber::from_internal_string(normalize(result), result_negative);
     }
 }
 
 BigFiniteNumber BigFiniteNumber::operator*(const BigFiniteNumber& other) const {
-    if (this->value == std::string(1, ADDITIVE_UNIT) || other.value == std::string(1, ADDITIVE_UNIT)) {
-        return BigFiniteNumber::from_internal_string(std::string(1, ADDITIVE_UNIT), false);
+    if (this->value == std::string(1, get_additive_unit()) || other.value == std::string(1, get_additive_unit())) {
+        return BigFiniteNumber::from_internal_string(std::string(1, get_additive_unit()), false);
     }
 
-    std::string s1_abs = this->value;
-    std::string s2_abs = other.value;
-    bool res_is_negative = (this->is_negative != other.is_negative);
-
-    std::string result_sum = std::string(1, ADDITIVE_UNIT); // 'a'
-
-    for (int i = s2_abs.length() - 1; i >= 0; --i) {
-        char digit2 = s2_abs[i];
-        std::string current_partial_product = std::string(s2_abs.length() - 1 - i, ADDITIVE_UNIT); // Сдвиг
-
-        char carry = ADDITIVE_UNIT; // 'a'
-        for (int j = s1_abs.length() - 1; j >= 0; --j) {
-            char digit1 = s1_abs[j];
-            int idx1 = get_symbol_weight(digit1);
-            int idx2 = get_symbol_weight(digit2);
-            int product_val = idx1 * idx2 + get_symbol_weight(carry);
-
-            carry = SYMBOLS[product_val / MOD];
-            current_partial_product += SYMBOLS[product_val % MOD];
+    bool result_negative = (this->is_negative != other.is_negative);
+    
+    // Используем метод сложения со сдвигами
+    BigFiniteNumber result = BigFiniteNumber::from_internal_string(std::string(1, get_additive_unit()), false);
+    BigFiniteNumber multiplicand = BigFiniteNumber::from_internal_string(this->value, false);
+    
+    // Проходим по каждой цифре множителя справа налево
+    for (int i = other.value.length() - 1; i >= 0; i--) {
+        char multiplier_digit = other.value[i];
+        
+        if (multiplier_digit != get_additive_unit()) {
+            // Умножаем multiplicand на текущую цифру множителя через сложение
+            BigFiniteNumber partial_product = BigFiniteNumber::from_internal_string(std::string(1, get_additive_unit()), false);
+            
+            char counter = get_additive_unit();
+            while (counter != multiplier_digit) {
+                partial_product = partial_product + multiplicand;
+                counter = next_symbol(counter);
+            }
+            
+            // Сдвиг влево (добавляем нули справа)
+            int shift_count = other.value.length() - 1 - i;
+            std::string shifted_value = partial_product.value;
+            for (int j = 0; j < shift_count; j++) {
+                shifted_value += get_additive_unit();
+            }
+            
+            BigFiniteNumber shifted_product = BigFiniteNumber::from_internal_string(shifted_value, false);
+            result = result + shifted_product;
         }
-        if (carry != ADDITIVE_UNIT) {
-            current_partial_product += carry;
-        }
-        std::reverse(current_partial_product.begin(), current_partial_product.end());
-
-        result_sum = (BigFiniteNumber::from_internal_string(result_sum, false) + BigFiniteNumber::from_internal_string(current_partial_product, false)).value;
     }
-    return BigFiniteNumber::from_internal_string(result_sum, res_is_negative);
+    
+    return BigFiniteNumber::from_internal_string(result.value, result_negative);
 }
 
 std::pair<BigFiniteNumber, BigFiniteNumber> BigFiniteNumber::divide(const BigFiniteNumber& other) const {
-    // Деление на ноль ('a') - бросаем исключение
-    if (other.value == std::string(1, ADDITIVE_UNIT)) {
+    if (other.value == std::string(1, get_additive_unit())) {
         throw std::runtime_error("Division by zero ('a').");
     }
 
-    // Особый случай: если делимое равно 'a' (0), то результат 'a'
-    if (this->value == std::string(1, ADDITIVE_UNIT)) {
-        BigFiniteNumber zero = BigFiniteNumber::from_internal_string(std::string(1, ADDITIVE_UNIT), false);
+    if (this->value == std::string(1, get_additive_unit())) {
+        BigFiniteNumber zero = BigFiniteNumber::from_internal_string(std::string(1, get_additive_unit()), false);
         return {zero, zero};
     }
 
-    BigFiniteNumber A_abs = BigFiniteNumber::from_internal_string(this->value, false);
-    BigFiniteNumber B_abs = BigFiniteNumber::from_internal_string(other.value, false);
+    // Работаем с абсолютными значениями
+    BigFiniteNumber dividend_abs = BigFiniteNumber::from_internal_string(this->value, false);
+    BigFiniteNumber divisor_abs = BigFiniteNumber::from_internal_string(other.value, false);
 
-    std::string Q_abs_str = "";
-    BigFiniteNumber current_remainder_abs = BigFiniteNumber::from_internal_string(std::string(1, ADDITIVE_UNIT), false); // 'a'
-
-    if (A_abs < B_abs) {
-        Q_abs_str = std::string(1, ADDITIVE_UNIT); // 'a'
-        current_remainder_abs = A_abs;
-    } else {
-        for (char digit : A_abs.value) {
-            current_remainder_abs.value += digit;
-            current_remainder_abs.value = current_remainder_abs.normalize(current_remainder_abs.value);
-
-            char q_digit_char = ADDITIVE_UNIT; // 'a'
-            int q_digit_weight = 0;
-
-            for (int i = 0; i < MOD; ++i) {
-                BigFiniteNumber test_q_digit = BigFiniteNumber::from_internal_string(std::string(1, SYMBOLS[i]), false);
-                BigFiniteNumber test_product = B_abs * test_q_digit;
-
-                if (current_remainder_abs < test_product) {
-                    q_digit_weight = i - 1;
-                    if (q_digit_weight < 0) q_digit_weight = 0;
-                    break;
-                }
-                q_digit_weight = i;
-            }
-            q_digit_char = SYMBOLS[q_digit_weight];
-            Q_abs_str += q_digit_char;
-
-            BigFiniteNumber q_digit_num = BigFiniteNumber::from_internal_string(std::string(1, q_digit_char), false);
-            BigFiniteNumber subtrahend = B_abs * q_digit_num;
-            current_remainder_abs = current_remainder_abs - subtrahend;
+    // Если делимое меньше делителя
+    if (dividend_abs < divisor_abs) {
+        if (this->is_negative) {
+            BigFiniteNumber minus_one = BigFiniteNumber::from_internal_string(std::string(1, get_multiplicative_unit()), true);
+            BigFiniteNumber remainder = divisor_abs - dividend_abs;
+            return {minus_one, remainder};
+        } else {
+            BigFiniteNumber zero = BigFiniteNumber::from_internal_string(std::string(1, get_additive_unit()), false);
+            return {zero, *this};
         }
     }
 
-    BigFiniteNumber Q_abs = BigFiniteNumber::from_internal_string(Q_abs_str, false);
-    BigFiniteNumber R_abs = current_remainder_abs;
-
-    bool Q_is_negative = (this->is_negative != other.is_negative);
-    BigFiniteNumber Q_initial = BigFiniteNumber::from_internal_string(Q_abs.value, Q_is_negative);
-
-    BigFiniteNumber R_calc = *this - (other * Q_initial);
-
-    BigFiniteNumber Q_final = Q_initial;
-    BigFiniteNumber R_final = R_calc;
-    BigFiniteNumber one = BigFiniteNumber::from_internal_string(std::string(1, MULTIPLICATIVE_UNIT), false); // 'b' (1)
-
-    // Коррекция для положительного остатка 0 <= R < |B|
-    if (R_final < BigFiniteNumber::from_internal_string(std::string(1, ADDITIVE_UNIT), false)) { // R_calc < 'a' (0)
-        Q_final = Q_final - one;
-        R_final = R_final + B_abs;
+    // Деление в столбик
+    std::string quotient_str;
+    BigFiniteNumber current_remainder = BigFiniteNumber::from_internal_string(std::string(1, get_additive_unit()), false);
+    
+    for (size_t i = 0; i < dividend_abs.value.length(); i++) {
+        current_remainder = BigFiniteNumber::from_internal_string(
+            current_remainder.value + std::string(1, dividend_abs.value[i]), false
+        );
+        current_remainder.value = normalize(current_remainder.value);
+        
+        char quotient_digit = get_additive_unit();
+        
+        for (char test_digit = get_multiplicative_unit(); test_digit != get_additive_unit(); test_digit = next_symbol(test_digit)) {
+            BigFiniteNumber test_product = divisor_abs * BigFiniteNumber::from_internal_string(std::string(1, test_digit), false);
+            if (test_product > current_remainder) break;
+            quotient_digit = test_digit;
+        }
+        
+        quotient_str += quotient_digit;
+        
+        if (quotient_digit != get_additive_unit()) {
+            BigFiniteNumber product = divisor_abs * BigFiniteNumber::from_internal_string(std::string(1, quotient_digit), false);
+            current_remainder = current_remainder - product;
+        }
     }
-    else if (R_final >= B_abs && R_final != BigFiniteNumber::from_internal_string(std::string(1, ADDITIVE_UNIT), false)) {
-         Q_final = Q_final + one;
-         R_final = R_final - B_abs;
+    
+    BigFiniteNumber quotient_abs = BigFiniteNumber::from_internal_string(normalize(quotient_str), false);
+    
+    // Определяем знаки
+    bool quotient_negative = (this->is_negative != other.is_negative);
+    BigFiniteNumber quotient = BigFiniteNumber::from_internal_string(quotient_abs.value, quotient_negative);
+    BigFiniteNumber remainder = current_remainder;
+    
+    // Корректировка для отрицательных
+    if (this->is_negative && remainder.value != std::string(1, get_additive_unit())) {
+        BigFiniteNumber one = BigFiniteNumber::from_internal_string(std::string(1, get_multiplicative_unit()), false);
+        quotient = quotient - one;
+        remainder = divisor_abs - remainder;
     }
-
-    return {Q_final, R_final};
+    
+    remainder.is_negative = false;
+    
+    return {quotient, remainder};
 }

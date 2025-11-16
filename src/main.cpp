@@ -56,7 +56,7 @@ BigFiniteNumber get_a_value() {
 }
 
 int main() {
-    init_symbols_map();
+    init_symbols_maps();
     display_menu();
 
     std::string input_line;
