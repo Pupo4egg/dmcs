@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 
-// НОВЫЙ порядок символов: a=0, b=1, e=2, c=3, g=4, h=5, d=6, f=7
 extern const std::vector<char> SYMBOLS;
 extern const int MOD;
 extern const char ADDITIVE_UNIT;

@@ -22,7 +22,7 @@ char symbolic_add_simple(char char1, char char2) {
 }
 
 void init_symbols_maps() {
-    // Инициализируем правило +1 через явное задание цикла
+    
     NEXT_SYMBOL_MAP['a'] = 'b';
     NEXT_SYMBOL_MAP['b'] = 'e'; 
     NEXT_SYMBOL_MAP['e'] = 'c';
@@ -30,58 +30,79 @@ void init_symbols_maps() {
     NEXT_SYMBOL_MAP['g'] = 'h';
     NEXT_SYMBOL_MAP['h'] = 'd';
     NEXT_SYMBOL_MAP['d'] = 'f';
-    NEXT_SYMBOL_MAP['f'] = 'a';  // Замыкаем цикл
+    NEXT_SYMBOL_MAP['f'] = 'a';  
     
-    // Инициализируем таблицу отрицаний (x + neg(x) = 'a')
+
     SYMBOL_NEGATION_MAP['a'] = 'a';
     SYMBOL_NEGATION_MAP['b'] = 'f';
     SYMBOL_NEGATION_MAP['e'] = 'd';
     SYMBOL_NEGATION_MAP['c'] = 'h';
-    SYMBOL_NEGATION_MAP['g'] = 'g';  // Сам себе обратный
+    SYMBOL_NEGATION_MAP['g'] = 'g';  
     SYMBOL_NEGATION_MAP['h'] = 'c';
     SYMBOL_NEGATION_MAP['d'] = 'e';
     SYMBOL_NEGATION_MAP['f'] = 'b';
     
-    // Инициализируем таблицу сложения с переносами
+   
     for (char c1 : SYMBOLS) {
         for (char c2 : SYMBOLS) {
             for (char carry_in : SYMBOLS) {
-                // Складываем три символа
-                char sum = symbolic_add_simple(symbolic_add_simple(c1, c2), carry_in);
+
+                char sum1 = symbolic_add_simple(c1, c2);
+                char final_sum = symbolic_add_simple(sum1, carry_in);
                 
-                // Определяем перенос
-                char carry_out = get_additive_unit();
+
+                char carry_out = get_additive_unit(); 
                 
-                // Эмулируем сложение в десятичной системе для определения переноса
-                int total = 0;
-                char current = get_additive_unit();
+                //был ли перенос при первом сложении
+                bool carry_from_first = (c1 != get_additive_unit() && c2 != get_additive_unit() && 
+                                        compare_chars(sum1, c1) < 0 && compare_chars(sum1, c2) < 0);
                 
-                // Считаем c1
-                while (current != c1) {
-                    total++;
-                    current = NEXT_SYMBOL_MAP.at(current);
+                //был ли перенос при втором сложении
+                bool carry_from_second = (sum1 != get_additive_unit() && carry_in != get_additive_unit() &&
+                                         compare_chars(final_sum, sum1) < 0 && compare_chars(final_sum, carry_in) < 0);
+                
+
+               /* if (c1 != get_additive_unit() && c2 != get_additive_unit()) {
+
+                    char current = c1;
+                    bool passed_through_a = false;
+                    
+                    for (char cnt = get_additive_unit(); cnt != c2; cnt = NEXT_SYMBOL_MAP.at(cnt)) {
+                        current = NEXT_SYMBOL_MAP.at(current);
+                        if (current == get_additive_unit() && cnt != c2) {
+                            passed_through_a = true;
+                            break;
+                        }
+                    }
+                    
+                    if (passed_through_a) {
+                        carry_from_first = true;
+                    }
                 }
                 
-                // Считаем c2
-                current = get_additive_unit();
-                while (current != c2) {
-                    total++;
-                    current = NEXT_SYMBOL_MAP.at(current);
-                }
+
+                if (sum1 != get_additive_unit() && carry_in != get_additive_unit()) {
+                    char current = sum1;
+                    bool passed_through_a = false;
+                    
+                    for (char cnt = get_additive_unit(); cnt != carry_in; cnt = NEXT_SYMBOL_MAP.at(cnt)) {
+                        current = NEXT_SYMBOL_MAP.at(current);
+                        if (current == get_additive_unit() && cnt != carry_in) {
+                            passed_through_a = true;
+                            break;
+                        }
+                    }
+                    
+                    if (passed_through_a) {
+                        carry_from_second = true;
+                    }
+                }*/
                 
-                // Считаем carry_in
-                current = get_additive_unit();
-                while (current != carry_in) {
-                    total++;
-                    current = NEXT_SYMBOL_MAP.at(current);
-                }
-                
-                // Если сумма превышает MOD-1, есть перенос
-                if (total >= MOD) {
+                if (carry_from_first || carry_from_second) {
                     carry_out = get_multiplicative_unit();
                 }
                 
-                ADDITION_TABLE[std::make_tuple(c1, c2, carry_in)] = std::make_pair(sum, carry_out);
+                ADDITION_TABLE[std::make_tuple(c1, c2, carry_in)] = std::make_pair(final_sum, carry_out);
             }
         }
     }
@@ -110,13 +131,12 @@ std::string get_max_value_str() {
 int compare_chars(char c1, char c2) {
     if (c1 == c2) return 0;
     
-    // Проходим по циклу, чтобы определить порядок
     char current = get_additive_unit();
     while (true) {
         if (current == c1) return -1;
         if (current == c2) return 1;
         current = NEXT_SYMBOL_MAP.at(current);
-        if (current == get_additive_unit()) break; // Прошли полный цикл
+        if (current == get_additive_unit()) break; 
     }
-    return 0; // Не должно случиться
+    return 0; 
 }

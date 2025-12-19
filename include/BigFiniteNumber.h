@@ -12,7 +12,7 @@ private:
 
     std::string normalize(std::string num_str) const;
     std::string pad_left(std::string num_str, int target_len) const;
-    void truncate();
+    void check_overflow() const;
 
     BigFiniteNumber(std::string val, bool neg);
 

@@ -7,27 +7,20 @@
 #include "utils.h"
 #include "constants.h"
 
-// Предварительные объявления функций
+
 BigFiniteNumber get_a_value();
 
-// Отображает меню
+
 void display_menu() {
     std::cout << "\n--- Большой Калькулятор Конечной Арифметики ---" << std::endl;
-    std::cout << "Порядок символов (+1): " << SYMBOLS[0] << "(0) -> " << SYMBOLS[1] << "(1) -> " << SYMBOLS[2] << "(2) -> " << SYMBOLS[3] << "(3) -> " << SYMBOLS[4] << "(4) -> " << SYMBOLS[5] << "(5) -> " << SYMBOLS[6] << "(6) -> " << SYMBOLS[7] << "(7) -> " << SYMBOLS[0] << "(0)..." << std::endl;
-    std::cout << "Аддитивная единица (0): " << ADDITIVE_UNIT << std::endl;
-    std::cout << "Мультипликативная единица (1): " << MULTIPLICATIVE_UNIT << std::endl;
-    std::cout << "8-разрядная арифметика." << std::endl;
+    std::cout << "Отношение порядка: " << SYMBOLS[0] << " -> " << SYMBOLS[1] << " -> " << SYMBOLS[2] << " -> " << SYMBOLS[3] << " -> " << SYMBOLS[4] << " -> " << SYMBOLS[5] << " -> " << SYMBOLS[6] << " -> " << SYMBOLS[7] << std::endl;
     std::cout << "Диапазон: " << get_min_value_str() << " до " << get_max_value_str() << std::endl;
     std::cout << "Допустимые операции: +, -, *, /" << std::endl;
-    std::cout << "Спец. случаи деления:" << std::endl;
-    std::cout << "  " << ADDITIVE_UNIT << "/" << ADDITIVE_UNIT << " = " << INFINITY_INTERVAL_STR << std::endl;
-    std::cout << "  " << ADDITIVE_UNIT << "/x (x!=" << ADDITIVE_UNIT << ") = " << ADDITIVE_UNIT << std::endl;
-    std::cout << "  x/" << ADDITIVE_UNIT << " (x!=" << ADDITIVE_UNIT << ") = " << "пустое множество" << std::endl;
     std::cout << "Введите 'exit' для выхода." << std::endl;
     std::cout << "-----------------------------------------------" << std::endl;
 }
 
-// Проверяет, является ли строка корректным числом
+
 bool is_valid_number_string(const std::string& s) {
     if (s.empty()) {
         std::cerr << "Ошибка: Пустая строка недопустима для числа." << std::endl;
@@ -50,7 +43,7 @@ bool is_valid_number_string(const std::string& s) {
     return true;
 }
 
-// Получить 'a' (ADDITIVE_UNIT) как BigFiniteNumber
+
 BigFiniteNumber get_a_value() {
     return BigFiniteNumber::from_internal_string(std::string(1, ADDITIVE_UNIT), false);
 }
@@ -73,21 +66,19 @@ int main() {
         size_t op_pos = std::string::npos;
         char found_op = '\0';
 
-        // Поиск оператора, исключая '-' в начале числа
         for (size_t i = 0; i < input_line.length(); ++i) {
             char current_char = input_line[i];
             if (current_char == '+' || current_char == '*' || current_char == '/') {
                 op_pos = i;
                 found_op = current_char;
                 break;
-            } else if (current_char == '-' && i > 0) { // Оператор '-' НЕ на первой позиции
+            } else if (current_char == '-' && i > 0) {
                 op_pos = i;
                 found_op = current_char;
                 break;
             }
         }
 
-        // Проверка на некорректный формат выражения
         if (found_op == '\0' || op_pos == std::string::npos) {
             if (input_line.length() == 1 && (input_line[0] == '+' || input_line[0] == '-' || input_line[0] == '*' || input_line[0] == '/')) {
                  std::cerr << "Ошибка: Введено только число. Ожидается 'число оператор число'." << std::endl;
@@ -120,23 +111,21 @@ int main() {
         try {
             BigFiniteNumber num1(s_num1);
             BigFiniteNumber num2(s_num2);
-            BigFiniteNumber a_val = get_a_value(); // Получаем 'a'
+            BigFiniteNumber a_val = get_a_value(); 
 
-            // --- Обработка особых случаев деления ---
             if (s_op == "/") {
-                if (num1 == a_val && num2 == a_val) { // a / a
+                if (num1 == a_val && num2 == a_val) { 
                     std::cout << "Результат: " << INFINITY_INTERVAL_STR << std::endl;
                     continue;
-                } else if (num2 == a_val) { // x / a (где x != a)
+                } else if (num2 == a_val) { 
                     std::cout << "Результат: пустое множество" << std::endl;
                     continue;
-                } else if (num1 == a_val) { // a / x (где x != a)
+                } else if (num1 == a_val) {
                     std::cout << "Результат: " << a_val << std::endl;
                     continue;
                 }
             }
 
-            // --- Стандартные операции ---
             if (s_op == "+") {
                 std::cout << "Результат: " << num1 + num2 << std::endl;
             } else if (s_op == "-") {
@@ -149,6 +138,9 @@ int main() {
             } else {
                  std::cerr << "Ошибка: Неизвестная операция '" << s_op << "'." << std::endl;
             }
+        }
+        catch (const std::overflow_error& e) {
+            std::cerr << "Ошибка переполнения. " << e.what() << std::endl;
         }
         catch (const std::runtime_error& e) {
             std::cerr << "Ошибка выполнения: " << e.what() << std::endl;
